@@ -1,0 +1,7 @@
+python-telegram-bot>=20.7,<21.0
+aiosqlite
+python-dotenv
+requests
+yookassa
+tenacity
+tzdata
