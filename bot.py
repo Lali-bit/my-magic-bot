@@ -12,6 +12,8 @@ import logging
 import hashlib
 import hmac
 import json
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, timedelta, time as dt_time
 from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
@@ -2259,6 +2261,25 @@ async def post_init(application: Application) -> None:
     logger.info("📅 Ежедневная рассылка настроена на 10:00 МСК")
 
 # ====
+# MINIMAL HEALTH SERVER (for Kuberns platform health checks)
+# ====
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def log_message(self, format, *args):
+        pass  # Suppress access logs
+
+def start_health_server(port: int = 8000):
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    logger.info(f"🩺 Health server started on port {port}")
+
+
+# ====
 # ГЛАВНАЯ ФУНКЦИЯ
 # ====
 
@@ -2309,6 +2330,9 @@ def main():
     logger.info("✅ Бот успешно запущен!")
     logger.info("Нажмите Ctrl+C для остановки")
     
+    # Start lightweight health server for platform health checks
+    start_health_server(port=8000)
+
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
